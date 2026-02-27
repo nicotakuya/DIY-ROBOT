@@ -1,0 +1,41 @@
+"番号","Parts name","Price","URL"
+"U1","RASPBERRY PI PICO W",1200,"https://akizukidenshi.com/catalog/g/g117947/"
+"U1","ピンソケット 1×20pin ×2",80,
+"U2","TFT LCD（1.54インチ 240×240ドットカラーグラフィックTFT LCDモジュール）",750,"https://akizukidenshi.com/catalog/g/g131019/"
+"U2","ピンソケット 1×8pin ",30,
+"U3","モータードライバー（TC78H653FTGモータードライバーモジュール）",200,"https://akizukidenshi.com/catalog/g/g114746/"
+"U3","ICソケット 16pin ",18,
+"R1","100k ohm 抵抗 ",1,
+"R2","100k ohm 抵抗 ",1,
+"R3","51 ohm 抵抗 ",1,
+"C1","100 micro F 電解コンデンサ ",10,
+"C2","100 micro F 電解コンデンサ ",10,
+"C3","0.1 micro F 積層セラミックコンデンサ",20,
+"C4","0.1 micro F 積層セラミックコンデンサ ",20,
+"C5","0.1 micro F 積層セラミックコンデンサ ",20,
+"D1","整流用ショットキーバリアダイオード40V1A 1S4 ",20,"https://akizukidenshi.com/catalog/g/g100127/"
+"SPK1","圧電スピーカー（PKM13EPYH4000-A0） ",30,"https://akizukidenshi.com/catalog/g/g104118/"
+"SW1","スライドスイッチ（1回路2接点 基板用） ",20,
+"SW2","タクトスイッチ ",15,
+"CN1","ピンソケット 1×4pin ",20,
+"CN2","ターミナルブロック 2.54mm 2P ",30,
+"CN3","ターミナルブロック 2.54mm 2P ",30,
+,"電池ボックス（単3×3本 ピン） ",80,
+,"タミヤ 楽しい工作シリーズ No.168 ダブルギヤボックス（130モータ2個入り） ",800,
+,"タミヤ 楽しい工作シリーズ No.193 スリムタイヤセット(2組入り)",200,
+,"タミヤ 楽しい工作シリーズ No.144 ボールキャスター セット(2組入り)",200,
+,"スペーサ（10mm）セット ",100,
+,"3mm ねじ",50,"https://akizukidenshi.com/catalog/g/g101885/"
+,"片面紙エポキシユニバーサル基板 Bタイプ ",180,
+,"片面紙エポキシユニバーサル基板 Bタイプ ",180,
+"Appendix",,,
+"R4","100k ohm 抵抗 ",1,
+"R5","100k ohm 抵抗 ",1,
+"R6","100k ohm 抵抗 ",1,
+"CN4","ピンヘッダ 1×4pin ",10,
+"CN5","GROVEコネクタ ",12,
+"LED1","マイコン内蔵RGBLED PL9823-F5 ",40,"https://akizukidenshi.com/catalog/g/g108411/"
+"PT1","フォトトランジスタ L-31ROPT1C ",20,"https://akizukidenshi.com/catalog/g/g104213/"
+"U4","マイクロSDカードスロットDIP化キット ",300,"https://akizukidenshi.com/catalog/g/g105488/"
+,"1.0mm厚片面ユニバーサル基板 Dタイプ",50,"https://akizukidenshi.com/catalog/g/g112019/"
+,"合計",4751,
