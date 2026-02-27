@@ -6,9 +6,11 @@ Raspberry Pi Picoで作るシンプルなロボットです。
 ## Files
 parts_list.csv : 部品のリスト。
 
-micropython : MicroPython版のプログラム。
+micropython : MicroPython版のプログラム。液晶の表示が遅いです。デバッグがしやすいです。
 
-arduino-pico : Arduino-Pico版のプログラム。
+arduino-pico : Arduino-Pico版のプログラム。液晶の表示が速いです。SDカードの読み書きに対応してます。
 
 schematics : 回路図。
 
+## Movie
+https://www.youtube.com/watch?v=z5slYXtXWPo
