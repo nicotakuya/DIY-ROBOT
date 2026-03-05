@@ -1,7 +1,7 @@
 # DIY-ROBOT
 ## Overview
 Raspberry Pi Picoで作るシンプルなロボットです。
-![Image](https://github.com/user-attachments/assets/e8d9c9af-faa8-4f02-972b-41141b3eba10)
+![Image](https://github.com/user-attachments/assets/53423d5b-102d-440b-9ace-2200dbc96556)
 
 ## Files
 parts_list.csv : 部品のリスト。
