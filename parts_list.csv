@@ -1,11 +1,11 @@
 "番号","Parts name","Price","URL"
-"U1","RASPBERRY PI PICO W",1200,"https://akizukidenshi.com/catalog/g/g117947/"
+"U1","RASPBERRY PI PICO",770,"https://akizukidenshi.com/catalog/g/g117947/"
 "U1","細ピンヘッダ 1×40pin",45,"https://akizukidenshi.com/catalog/g/g106631/"
 "U1","ピンソケット 1×20pin ×2",80,"https://akizukidenshi.com/catalog/g/g105779/"
-"U2","TFT LCD（1.54インチ 240×240ドットカラーグラフィックTFT LCDモジュール）",750,"https://akizukidenshi.com/catalog/g/g131019/"
-"U2","ピンソケット 1×8pin ",30,"https://akizukidenshi.com/catalog/g/g103785/"
+"U2","0.96インチ 128×64ドット有機ELディスプレイ(OLED) 白色",580,"https://akizukidenshi.com/catalog/g/g112031/"
+"U2","ピンソケット 1×4pin ",20,"https://akizukidenshi.com/catalog/g/g110099/"
 "U3","モータードライバー（TC78H653FTGモータードライバーモジュール）",200,"https://akizukidenshi.com/catalog/g/g114746/"
-"U3","ICソケット 16pin ",18,
+"U3","ICソケット 16pin ",18,"https://akizukidenshi.com/catalog/g/g100007/"
 "R1","100k ohm 抵抗 ",1,
 "R2","100k ohm 抵抗 ",1,
 "R3","150 ohm 抵抗 ",1,
@@ -18,22 +18,22 @@
 "SPK1","圧電スピーカー（PKM13EPYH4000-A0） ",30,"https://akizukidenshi.com/catalog/g/g104118/"
 "SW1","スライドスイッチ（1回路2接点 基板用） ",20,"https://akizukidenshi.com/catalog/g/g115707/"
 "SW2","タクトスイッチ ",15,"https://akizukidenshi.com/catalog/g/g103650/"
-"CN1","ピンソケット 1×4pin ",20,"https://akizukidenshi.com/catalog/g/g110099/"
-"CN2","ターミナルブロック 2.54mm 2P ",20,"https://akizukidenshi.com/catalog/g/g115877/"
-"CN3","ターミナルブロック 2.54mm 2P ",20,"https://akizukidenshi.com/catalog/g/g115877/"
+"CN1","ピンソケット 1×20pin ",40,
+"CN2","ピンソケット 1×2pin ",4,
+"CN3","ピンソケット 1×2pin ",4,
 ,"電池ボックス（単3×3本 ピン） ",80,"https://akizukidenshi.com/catalog/g/g102673/"
-,"タミヤ 楽しい工作シリーズ No.168 ダブルギヤボックス（130モータ2個入り） ",800,
-,"タミヤ 楽しい工作シリーズ No.193 スリムタイヤセット(2組入り)",200,
-,"タミヤ 楽しい工作シリーズ No.144 ボールキャスター セット(2組入り)",200,
-,"スペーサ（10mm）セット ",100,"https://akizukidenshi.com/catalog/g/g101864/"
-,"3mm ねじ",50,"https://akizukidenshi.com/catalog/g/g101885/"
-,"片面紙エポキシユニバーサル基板 Bタイプ ",180,"https://akizukidenshi.com/catalog/g/g100181/"
-,"片面紙エポキシユニバーサル基板 Bタイプ ",180,"https://akizukidenshi.com/catalog/g/g100181/"
+,"ギアードモーター 6V 1:48 190RPM(MG-TTY1048D)",280,"https://akizukidenshi.com/catalog/g/g118270/"
+,"ギアードモーター 6V 1:48 190RPM(MG-TTY1048D)",280,"https://akizukidenshi.com/catalog/g/g118270/"
+,"ペットボトルのキャップ（タイヤとして使う）",0,
+,"輪ゴム（タイヤに巻く）",0,
+,"2.6mm ねじ（長さ16mm）・ナット",80,
+,"両面スルーホールユニバーサル基板 6*8",90,"https://akizukidenshi.com/catalog/g/g112980/"
+,"両面スルーホールユニバーサル基板 6*8",90,"https://akizukidenshi.com/catalog/g/g112980/"
 "Appendix",,,
 "R4","100k ohm 抵抗 ",1,
 "CN4","ピンヘッダ 1×4pin ",10,
 "LED1","マイコン内蔵RGBLED PL9823-F5 ",40,"https://akizukidenshi.com/catalog/g/g108411/"
 "PT1","フォトトランジスタ L-31ROPT1C ",20,"https://akizukidenshi.com/catalog/g/g104213/"
-"U4","マイクロSDカードスロットDIP化キット ",300,"https://akizukidenshi.com/catalog/g/g112667/"
+"U4","SDカードコネクター SD381200-S304",80,"https://akizukidenshi.com/catalog/g/g105488/"
 ,"1.0mm厚片面ユニバーサル基板 Dタイプ",50,"https://akizukidenshi.com/catalog/g/g112019/"
-,"合計",4762,
+,"合計",3030,

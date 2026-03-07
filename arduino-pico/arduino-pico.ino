@@ -1,6 +1,6 @@
 // DIY-ROBOT
 // for Raspberry Pi Pico(Arduino-Pico)
-// and TFT-LCD(M154-240240-RGB ST7789)
+// and OLED(SSD1306) or TFT-LCD(M154-240240-RGB ST7789)
 // and Motor driver(TC78H653FTG)
 // and NeoPixel(RGBLED PL9823-F5)
 // (C)2026 takuya matsubara
@@ -12,63 +12,59 @@
 #include <Adafruit_NeoPixel.h>
 // https://github.com/adafruit/Adafruit_NeoPixel
 
-#define ATM0177B3A 1  // 1.7inch TFT Display
-#define SSD1306    3  // 0.9inch OLED Display
-#define M154240240 4  // 1.5inch TFT Display M154-240240-RGB
+#define SSD1306    1  // 0.96inch OLED Display
+#define M154240240 2  // 1.5inch TFT Display M154-240240-RGB
+#define ATM0177B3A 3  // 1.7inch TFT Display
 
+// ディスプレイに合わせて書き換える
+#define DISP_TYPE    SSD1306   // DISPLAY TYPE
+//#define DISP_TYPE    M154240240   // DISPLAY TYPE
 //#define DISP_TYPE    ATM0177B3A   // DISPLAY TYPE
-#define DISP_TYPE    M154240240   // DISPLAY TYPE
 
 #define DISP_ROTATE  0 // TURN SCREEN(0=normal / 1=turn90 / 2=turn180 / 3=turn270)
 
 #define SOFT_SPI  0 // (0=hardware / 1=software)
 
 #if DISP_TYPE==ATM0177B3A
-#define VRAMWIDTH   128  // width[pixel]
-#define VRAMHEIGHT  160  // height[pixel]
-#define FONTSIZE    2
-#define VRSPZOOM    3    // sprite zoom
+#define VRAM_WIDTH   128  // width[pixel]
+#define VRAM_HEIGHT  160  // height[pixel]
+#define FONTSIZE    2     // フォント拡大率
 #endif
 
 #if DISP_TYPE==SSD1306
-#define VRAMWIDTH   128 // width[pixel]
-#define VRAMHEIGHT  64  // height[pixel]
-#define FONTSIZE    1
-#define VRSPZOOM    1   // sprite zoom
+#define VRAM_WIDTH   128 // width[pixel]
+#define VRAM_HEIGHT  64  // height[pixel]
+#define FONTSIZE    1    // フォント拡大率
 #endif
 
 #if DISP_TYPE==M154240240
-#define VRAMWIDTH   240  // width[pixel]
-#define VRAMHEIGHT  240  // height[pixel]
-#define FONTSIZE    3
-#define VRSPZOOM    3    // sprite zoom
+#define VRAM_WIDTH   240  // width[pixel]
+#define VRAM_HEIGHT  240  // height[pixel]
+#define FONTSIZE    3     // フォント拡大率
 #endif
 
-#define VRAMSIZE   (VRAMWIDTH*VRAMHEIGHT*2) 
+#define FONTPIXEL  (FONTSIZE*8)
+#define VRAM_SIZE   (VRAM_WIDTH*VRAM_HEIGHT*2) 
 
 #if DISP_ROTATE==0
-#define VRAMXRANGE VRAMWIDTH
-#define VRAMYRANGE VRAMHEIGHT
+#define VRAMXRANGE VRAM_WIDTH
+#define VRAMYRANGE VRAM_HEIGHT
 #endif
 #if DISP_ROTATE==1
-#define VRAMYRANGE VRAMWIDTH
-#define VRAMXRANGE VRAMHEIGHT
+#define VRAMYRANGE VRAM_WIDTH
+#define VRAMXRANGE VRAM_HEIGHT
 #endif
 #if DISP_ROTATE==2
-#define VRAMXRANGE VRAMWIDTH
-#define VRAMYRANGE VRAMHEIGHT
+#define VRAMXRANGE VRAM_WIDTH
+#define VRAMYRANGE VRAM_HEIGHT
 #endif
 #if DISP_ROTATE==3
-#define VRAMYRANGE VRAMWIDTH
-#define VRAMXRANGE VRAMHEIGHT
+#define VRAMYRANGE VRAM_WIDTH
+#define VRAMXRANGE VRAM_HEIGHT
 #endif
 #define VRAMXMAX  (VRAMXRANGE-1)
 #define VRAMYMAX  (VRAMYRANGE-1)
 
-//const int SDCARD_MISO = 16;
-//const int SDCARD_MOSI = 19;
-//const int SDCARD_CS = 17;
-//const int SDCARD_SCK = 18;
 #define SDCARD_MISO   16
 #define SDCARD_MOSI   19
 #define SDCARD_CS     17
@@ -91,7 +87,7 @@ Adafruit_NeoPixel pixels(NUMPIXELS, GPIO_NEOPIXEL, NEO_GRB + NEO_KHZ800);
 
 // 周波数テーブル
 PROGMEM const int freq_table[] = {
-    262,  // C (ド) 4
+    262,  // C (ド)
     277,  // C#
     294,  // D (レ)
     311,  // D#
@@ -103,7 +99,7 @@ PROGMEM const int freq_table[] = {
     440,  // A (ラ) 
     466,  // A# 
     494,  // B (シ) 
-    523   // C (ド) 5
+    523   // C (ド)
 };
 
 PROGMEM const char notes1[] = {0,2,4,5,7,9,11,12,99};
@@ -116,11 +112,10 @@ PROGMEM const char note_so[] = {7,99};
 PROGMEM const char note_ra[] = {9,99};
 PROGMEM const char note_si[] = {11,99};
 
-unsigned char vram[VRAMSIZE];
+unsigned char vram[VRAM_SIZE];
 int putch_x = 0;
 int putch_y = 0;
 unsigned int putch_color = 0xffff;
-int putch_zoom = 1;
 
 void disp_init(void);
 void disp_update(void);
@@ -142,21 +137,21 @@ void vram_spclr(int x,int y);
 void spi_sendbyte(unsigned char data);
 unsigned int color16bit(int r,int g,int b);
 
-// ABS
+//----ABS
 int fnc_abs(int a)
 {
   if(a<0)a = -a;
   return (a);
 }
 
-// SGN
+//----SGN
 int fnc_sgn(int a)
 {
   if(a<0)return(-1);
   return (1);
 }
 
-// 画面キャプチャ
+//----画面キャプチャ
 void capture(void)
 {
   unsigned int color;
@@ -182,7 +177,6 @@ void capture(void)
 #if DISP_TYPE==ATM0177B3A
 #define TFTCLK    14   // clock
 #define TFTMOSI   15   // TX
-//#define TFTMISO   16   // RX
 #define TFTCS     13   // chip select
 #define TFTCD     12   // command/data
 
@@ -208,7 +202,7 @@ void capture(void)
 #define VCOM_OFFSET_CONTROL       0xC7
 #define GAM_R_SEL                 0xF2
 
-// INITIALIZE
+//----(ATM0177B3A)初期化
 void disp_init(void)
 {
   pinMode(TFTMOSI, OUTPUT);
@@ -224,7 +218,6 @@ void disp_init(void)
   SPI1.setCS(TFTCS);
   SPI1.setSCK(TFTCLK);
   SPI1.setTX(TFTMOSI);
-//  SPI1.setRX(TFTMISO);
   SPI1.begin();
   SPI1.beginTransaction(SPISettings(16000000, MSBFIRST, SPI_MODE0));
 #endif
@@ -245,13 +238,13 @@ void disp_init(void)
   tft_sendcmd_byte(POWER_CONTROL_2,0x02);
   tft_sendcmd_word(VCOM_CONTROL_1,0x5063);
   tft_sendcmd_byte(VCOM_OFFSET_CONTROL,0x00);
-  tft_sendcmd_long(COLUMN_ADDRESS_SET,VRAMWIDTH-1); 
-  tft_sendcmd_long(PAGE_ADDRESS_SET,VRAMHEIGHT-1); 
+  tft_sendcmd_long(COLUMN_ADDRESS_SET,VRAM_WIDTH-1); 
+  tft_sendcmd_long(PAGE_ADDRESS_SET,VRAM_HEIGHT-1); 
   tft_sendcmd(DISPLAY_ON);
   delay(25);
 }
 
-//
+//----(ATM0177B3A)送信
 void spi_sendbyte(unsigned char data)
 {
 #if SOFT_SPI==0
@@ -269,7 +262,7 @@ void spi_sendbyte(unsigned char data)
 #endif
 }
 
-//
+//----(ATM0177B3A)コマンド送信
 void tft_sendcmd(unsigned char data)
 {
   digitalWrite(TFTCD,LOW);
@@ -279,7 +272,7 @@ void tft_sendcmd(unsigned char data)
   digitalWrite(TFTCD,HIGH);
 }
 
-//
+//----(ATM0177B3A)コマンド送信byte
 void tft_sendcmd_byte(unsigned char cmd,unsigned char data)
 {
   tft_sendcmd(cmd);
@@ -289,7 +282,7 @@ void tft_sendcmd_byte(unsigned char cmd,unsigned char data)
   delay(1);
 }
 
-//
+//----(ATM0177B3A)コマンド送信word
 void tft_sendcmd_word(unsigned char cmd,unsigned int data)
 {
   tft_sendcmd(cmd);
@@ -300,7 +293,7 @@ void tft_sendcmd_word(unsigned char cmd,unsigned int data)
   delay(1);
 }
 
-//
+//----(ATM0177B3A)コマンド送信long
 void tft_sendcmd_long(unsigned char cmd,unsigned long data)
 {
   tft_sendcmd(cmd);
@@ -313,7 +306,7 @@ void tft_sendcmd_long(unsigned char cmd,unsigned long data)
   delay(1);
 }
 
-// SEND VRAM to DISPLAY 
+//----(ATM0177B3A)画面更新
 void disp_update(void)
 {
   unsigned int totalcnt;
@@ -322,7 +315,7 @@ void disp_update(void)
   tft_sendcmd(MEMORY_WRITE);
   digitalWrite(TFTCS,LOW);
   ptr = vram;
-  totalcnt = VRAMSIZE;
+  totalcnt = VRAM_SIZE;
   while(totalcnt--){
     spi_sendbyte(*ptr++);
   }
@@ -335,6 +328,8 @@ void disp_update(void)
 //
 #if DISP_TYPE==SSD1306
 
+#define OLED_SDA 2
+#define OLED_SCL 3
 #define OLEDADDR  (0x78 >> 1) // SSD1306 I2C address
 
 #define SET_CONTRAST_CONTROL  0x81
@@ -353,31 +348,31 @@ void disp_update(void)
 #define SET_COLUMN_ADDRESS    0x21
 #define SET_PAGE_ADDRESS      0x22
 
-//
+//----(OLED)コマンド送信byte
 void oled_command(unsigned char data)
 {
   Wire1.beginTransmission(OLEDADDR);
   Wire1.write(0b10000000);
-  Wire1.write(data);             
+  Wire1.write(data);
   Wire1.endTransmission();
 }
 
-//
+//----(OLED)コマンド送信word
 void oled_command2(unsigned char data1,unsigned char data2)
 {
   Wire1.beginTransmission(OLEDADDR);
   Wire1.write(0b00000000);
-  Wire1.write(data1);             
-  Wire1.write(data2);             
+  Wire1.write(data1);
+  Wire1.write(data2);
   Wire1.endTransmission();
 }
 
-// INITIALIZE
+//----(OLED)初期化
 void disp_init(void)
 {
-  Wire1.setSDA(18);
-  Wire1.setSCL(19);
-  Wire1.setClock(2000000);  
+  Wire1.setSDA(OLED_SDA);
+  Wire1.setSCL(OLED_SCL);
+  Wire1.setClock(2000000);
   Wire1.begin();
 
   delay(50);
@@ -397,7 +392,7 @@ void disp_init(void)
   delay(10);
 }
 
-//   SEND VRAM to DISPLAY 
+//----(OLED)画面更新
 void disp_update(void){
   int i,j,x,y;
   unsigned char *ptr,*ptr2;
@@ -407,36 +402,38 @@ void disp_update(void){
   Wire1.write(0b00000000);
   Wire1.write(SET_COLUMN_ADDRESS);
   Wire1.write(0);       // start column
-  Wire1.write(VRAMWIDTH-1); // end column
+  Wire1.write(VRAM_WIDTH-1); // end column
   Wire1.write(SET_PAGE_ADDRESS);
   Wire1.write(0);           // start page
-  Wire1.write((VRAMHEIGHT/8)-1); // end page
+  Wire1.write((VRAM_HEIGHT/8)-1); // end page
   Wire1.endTransmission();
 
   x=0;
   y=0;
   ptr = vram;
-  while(y < VRAMHEIGHT){  
+  while(y < VRAM_HEIGHT){  
     Wire1.beginTransmission(OLEDADDR);
     Wire1.write(0b01000000);
 
+    // 8 Bytes
     for(i=0; i<8; i++){
       ptr2 = ptr;
       work = 0;
+      // pack 8 bit
       for(j=0; j<8; j++){  
         work >>= 1;
         if(*ptr2)work |= 0x80;
-        ptr2 += VRAMWIDTH*2;
+        ptr2 += VRAM_WIDTH*2;
       }
       Wire1.write(work);
       x++;
       ptr += 2;
     }
     Wire1.endTransmission();
-    if(x >= VRAMWIDTH){
+    if(x >= VRAM_WIDTH){
       x=0;
       y+=8;
-      ptr = vram + (y*VRAMWIDTH*2);
+      ptr = vram + (y*VRAM_WIDTH*2);
     }
   }
 }
@@ -446,11 +443,10 @@ void disp_update(void){
 #if DISP_TYPE==M154240240
 #define TFTCLK    14   // clock
 #define TFTMOSI   15   // TX
-//#define TFTMISO   16   // RX
 #define TFTCS     13   // chip select
 #define TFTCD     12   // command/data
 
-// INITIALIZE
+//----(M154240240)初期化
 void disp_init(void)
 {
   pinMode(TFTMOSI, OUTPUT);
@@ -466,7 +462,6 @@ void disp_init(void)
   SPI1.setCS(TFTCS);
   SPI1.setSCK(TFTCLK);
   SPI1.setTX(TFTMOSI);
-//  SPI1.setRX(TFTMISO);
   SPI1.begin();
   SPI1.beginTransaction(SPISettings(16000000, MSBFIRST, SPI_MODE0));
 #endif
@@ -481,12 +476,12 @@ void disp_init(void)
   tft_sendcmd(0x21);  // INVON (21h): Display Inversion On 
   tft_sendcmd(0x29);  // DISPON (29h): Display On
   delay(200);
-  tft_sendcmd_long(0x2A,VRAMWIDTH-1);  // CASET (2Ah): Column Address Set
-  tft_sendcmd_long(0x2B,VRAMHEIGHT-1); // RASET (2Bh): Row Address Set
+  tft_sendcmd_long(0x2A,VRAM_WIDTH-1);  // CASET (2Ah): Column Address Set
+  tft_sendcmd_long(0x2B,VRAM_HEIGHT-1); // RASET (2Bh): Row Address Set
   delay(25);
 }
 
-//
+//----(M154240240)送信
 void spi_sendbyte(unsigned char data)
 {
 #if SOFT_SPI==0
@@ -504,7 +499,7 @@ void spi_sendbyte(unsigned char data)
 #endif
 }
 
-//
+//----(M154240240)コマンド送信
 void tft_sendcmd(unsigned char data)
 {
   digitalWrite(TFTCD,LOW);
@@ -514,7 +509,7 @@ void tft_sendcmd(unsigned char data)
   digitalWrite(TFTCD,HIGH);
 }
 
-//
+//----(M154240240)コマンド送信byte
 void tft_sendcmd_byte(unsigned char cmd,unsigned char data)
 {
   tft_sendcmd(cmd);
@@ -524,7 +519,7 @@ void tft_sendcmd_byte(unsigned char cmd,unsigned char data)
   delay(1);
 }
 
-//
+//----(M154240240)コマンド送信long
 void tft_sendcmd_long(unsigned char cmd,unsigned long data)
 {
   tft_sendcmd(cmd);
@@ -537,7 +532,7 @@ void tft_sendcmd_long(unsigned char cmd,unsigned long data)
   delay(1);
 }
 
-// SEND VRAM to DISPLAY 
+//----(M154240240) 画面更新 
 void disp_update(void)
 {
   unsigned int totalcnt;
@@ -546,7 +541,7 @@ void disp_update(void)
   tft_sendcmd(0x2C); //RAMWR (2Ch): Memory Write
   digitalWrite(TFTCS,LOW);
   ptr = vram;
-  totalcnt = VRAMSIZE;
+  totalcnt = VRAM_SIZE;
   while(totalcnt--){
     spi_sendbyte(*ptr++);
   }
@@ -556,7 +551,7 @@ void disp_update(void)
 }
 #endif
 
-// CALC. COLOR
+//----カラーコード
 unsigned int color16bit(int r,int g,int b)
 {
 // RRRRRGGGGGGBBBBB
@@ -569,20 +564,20 @@ unsigned int color16bit(int r,int g,int b)
   return(((unsigned int)r << 11)+(g << 5)+b);
 }
 
-// CLEAR VRAM
+//----CLEAR VRAM
 void vram_cls(void)
 {
   long i;
   unsigned char *ptr;
 
   ptr = vram;
-  i = VRAMSIZE;
+  i = VRAM_SIZE;
   while(i--){
     *ptr++ = 0;
   }
 }
 
-// GET PIXEL
+//----POINT
 unsigned int vram_point(int x,int y)
 {
   int i;
@@ -591,33 +586,33 @@ unsigned int vram_point(int x,int y)
 
 #if DISP_ROTATE==1
   i=x;
-  x=(VRAMWIDTH-1)-y;
+  x=(VRAM_WIDTH-1)-y;
   y=i;
 #endif
 #if DISP_ROTATE==2
-  x=(VRAMWIDTH-1)-x;
-  y=(VRAMHEIGHT-1)-y;
+  x=(VRAM_WIDTH-1)-x;
+  y=(VRAM_HEIGHT-1)-y;
 #endif
 #if DISP_ROTATE==3
   i=x;
   x=y;
-  y=(VRAMHEIGHT-1)-i;
+  y=(VRAM_HEIGHT-1)-i;
 #endif
 
   if(x<0)return(0);
   if(y<0)return(0);
-  if(x>=VRAMWIDTH)return(0);
-  if(y>=VRAMHEIGHT)return(0);
+  if(x>=VRAM_WIDTH)return(0);
+  if(y>=VRAM_HEIGHT)return(0);
 
   ptr = vram;
-  ptr += ((long)y*(VRAMWIDTH*2)) + (x*2);
+  ptr += ((long)y*(VRAM_WIDTH*2)) + (x*2);
   color =  *ptr << 8;
   ptr++;
   color += *ptr;
   return(color);
 }
 
-// DRAW PIXEL
+//----PSET
 void vram_pset(int x,int y,unsigned int color)
 {
   int i;
@@ -625,31 +620,31 @@ void vram_pset(int x,int y,unsigned int color)
 
 #if DISP_ROTATE==1
   i=x;
-  x=(VRAMWIDTH-1)-y;
+  x=(VRAM_WIDTH-1)-y;
   y=i;
 #endif
 #if DISP_ROTATE==2
-  x=(VRAMWIDTH-1)-x;
-  y=(VRAMHEIGHT-1)-y;
+  x=(VRAM_WIDTH-1)-x;
+  y=(VRAM_HEIGHT-1)-y;
 #endif
 #if DISP_ROTATE==3
   i=x;
   x=y;
-  y=(VRAMHEIGHT-1)-i;
+  y=(VRAM_HEIGHT-1)-i;
 #endif
 
   if(x<0)return;
   if(y<0)return;
-  if(x>=VRAMWIDTH)return;
-  if(y>=VRAMHEIGHT)return;
+  if(x>=VRAM_WIDTH)return;
+  if(y>=VRAM_HEIGHT)return;
   ptr = vram;
-  ptr += ((long)y*(VRAMWIDTH*2)) + (x*2);
+  ptr += ((long)y*(VRAM_WIDTH*2)) + (x*2);
 
   *ptr++ = color >> 8;   //high
   *ptr = color & 0xff;   //low 
 }
 
-// BOX FILL
+//----BOX FILL
 void vram_fill(int x1 ,int y1 ,int x2 ,int y2 ,unsigned int color)
 {
   int x,y;
@@ -660,7 +655,7 @@ void vram_fill(int x1 ,int y1 ,int x2 ,int y2 ,unsigned int color)
   }
 }
 
-// DRAW LINE
+//----DRAW LINE
 void vram_line(int x1 ,int y1 ,int x2 ,int y2 ,unsigned int color)
 {
   int xd;    // X2-X1座標の距離
@@ -704,26 +699,20 @@ void vram_line(int x1 ,int y1 ,int x2 ,int y2 ,unsigned int color)
   }
 }
 
-// LOCATE
+//----LOCATE
 void vram_locate(int textx, int texty)
 {
   putch_x = textx;
   putch_y = texty;
 }
 
-// TEXT COLOR
+//----TEXT COLOR
 void vram_textcolor(unsigned int color)
 {
   putch_color = color;
 }
 
-// TEXT ZOOM
-void vram_textzoom(int zoom)
-{
-  putch_zoom = zoom;
-}
-
-// PRINT CHARACTER
+//----PRINT CHARACTER
 void vram_putch(unsigned char ch)
 {
   char i,j;
@@ -731,10 +720,10 @@ void vram_putch(unsigned char ch)
   int idx,x,y;
 
   if(ch =='\n')putch_x += VRAMXMAX;
-  if(putch_x > (VRAMXRANGE-(8*putch_zoom))){
+  if(putch_x > (VRAMXRANGE-(FONTPIXEL))){
     putch_x = 0;
-    putch_y += 8*putch_zoom;
-    y = (VRAMYRANGE-(8*putch_zoom));
+    putch_y += FONTPIXEL;
+    y = (VRAMYRANGE-(FONTPIXEL));
     if(putch_y > y){
       vram_scroll(0,putch_y - y);
       putch_y = y;
@@ -750,17 +739,17 @@ void vram_putch(unsigned char ch)
     idx++;
     for(j=0; j<8; j++){
       if(bitdata & 0x80){
-        x=putch_x+(j*putch_zoom);
-        y=putch_y+(i*putch_zoom);
-        vram_fill(x,y,x+putch_zoom-1,y+putch_zoom-1,putch_color);
+        x=putch_x+(j*FONTSIZE);
+        y=putch_y+(i*FONTSIZE);
+        vram_fill(x,y,x+FONTSIZE-1,y+FONTSIZE-1,putch_color);
       }
       bitdata <<= 1;
     }
   }
-  putch_x += 8*putch_zoom;
+  putch_x += FONTPIXEL;
 }
 
-// PRINT STRING
+//----PRINT STRING
 void vram_putstr(unsigned char *p)
 {
   while(*p != 0){
@@ -768,7 +757,7 @@ void vram_putstr(unsigned char *p)
   }
 }
 
-// PRINT DECIMAL
+//----PRINT DECIMAL
 void vram_putdec(unsigned int num)
 {
   unsigned char ch;
@@ -782,17 +771,7 @@ void vram_putdec(unsigned int num)
   }
 }
 
-// PRINT VOLT
-void vram_putvolt(unsigned int num)
-{
-  vram_putch((num / 1000)+'0');
-  vram_putch('.');
-  vram_putch(((num / 100) % 10)+'0');
-  vram_putch(((num / 10) % 10)+'0');
-  vram_putch('V');
-}
-
-// PRINT HEXADECIMAL
+//----PRINT HEXADECIMAL
 void vram_puthex(unsigned char num)
 {
   unsigned char ch;
@@ -805,7 +784,7 @@ void vram_puthex(unsigned char num)
   vram_putch( ch);
 }
 
-// SCROLL
+//----SCROLL
 void vram_scroll(int xd,int yd)
 {
   int x,y;
@@ -819,12 +798,12 @@ void vram_scroll(int xd,int yd)
   }
 }
 
-// BCDを10進に変換
+//----BCDを10進に変換
 unsigned char bcd_to_num(unsigned char num){
   return((num >> 4)*10 + (num & 0xf));
 }
 
-// 10進をBCDに変換
+//----10進をBCDに変換
 unsigned char num_to_bcd(unsigned char num){
   unsigned char numhigh,numlow;
   numhigh = num / 10;
@@ -832,7 +811,7 @@ unsigned char num_to_bcd(unsigned char num){
   return((numhigh << 4) + numlow);
 }
 
-// 
+//----文字数
 int str_length(unsigned char *str)
 {
   int l;
@@ -843,12 +822,23 @@ int str_length(unsigned char *str)
   return(l);
 }
 
-//----
+//----電圧[mV]を文字列に変換
+void str_volt(unsigned char *dst,unsigned int mv)
+{
+  *dst++ = (mv / 1000)+'0';
+  *dst++ = '.';
+  *dst++ = ((mv / 100) % 10)+'0';
+  *dst++ = ((mv / 10) % 10)+'0';
+  *dst++ = 'V';
+  *dst++ = 0;
+}
+
+//----テキスト表示
 void print_text(int x, int y, unsigned char *str)
 {
   int l;
   l = str_length(str);
-  vram_fill(x,y,x+l*24,y+24,0);
+  vram_fill(x,y,x+l*FONTPIXEL,y+FONTPIXEL,0);
   vram_locate(x,y);
   vram_putstr(str);
   disp_update();
@@ -866,27 +856,30 @@ void sdcard_init(void)
   }
 }
 
-//----
+//----SDカード読み書きテスト
 void sdcard_test(void)
 {
   char filename[] = "example.txt";
   File myFile;
   char tempstr[20];
+  print_text(0,0,(unsigned char *)"SD CARD");
 
-  print_text(0,0*24,(unsigned char *)"SD CARD");
-  print_text(0,1*24,(unsigned char *)"WRITE");
+  // ファイル書き込み
+  print_text(0,1*FONTPIXEL,(unsigned char *)"WRITE");
   button_wait();
   myFile = SD.open(filename, FILE_WRITE);
   myFile.println("Hello!");
   myFile.close();
 
+  // ファイルの存在
   if (SD.exists(filename)) {
-    print_text(0,2*24,(unsigned char *)"EXIST");
+    print_text(0,2*FONTPIXEL,(unsigned char *)"EXIST");
   } else {
-    print_text(0,2*24,(unsigned char *)"NOT EXIST");
+    print_text(0,2*FONTPIXEL,(unsigned char *)"NOT EXIST");
   }
 
-  print_text(0,3*24,(unsigned char *)"READ");
+  // ファイル読み込み
+  print_text(0,3*FONTPIXEL,(unsigned char *)"READ");
   button_wait();
   myFile = SD.open(filename);
   if (!myFile) {
@@ -901,9 +894,10 @@ void sdcard_test(void)
     tempstr[i] = myFile.read();
   }
   myFile.close();
-  print_text(0,4*24,(unsigned char *)tempstr);
+  print_text(0,4*FONTPIXEL,(unsigned char *)tempstr);
 
-  print_text(0,5*24,(unsigned char *)"DELETE");
+  // ファイル削除
+  print_text(0,5*FONTPIXEL,(unsigned char *)"DELETE");
   button_wait();
   SD.remove(filename);
   button_wait();
@@ -915,44 +909,67 @@ void button_init(void)
   pinMode(GPIO_BUTTON, INPUT_PULLUP);
 }
 
-//----
+//----ボタン入力待ち
 void button_wait(void)
 {
   int x,y;
   x = 0;
-  y = 240-24;
+  y = VRAMYRANGE-FONTPIXEL;
 
-  vram_fill(x,y,x+9*24,y+24,color16bit(128,0,0));
+  vram_fill(x,y,x+10*FONTPIXEL,y+FONTPIXEL,color16bit(255,255,255));
+  vram_textcolor(0);
   vram_locate(x,y);
-  vram_putstr((unsigned char *)"PUSH BTN.");
+  vram_putstr((unsigned char *)" PUSH BTN.");
   disp_update();
+  vram_textcolor(color16bit(255,255,255));
 
   while(1){
-    if (digitalRead(GPIO_BUTTON) == LOW){
-      break;
-    }
+    if (digitalRead(GPIO_BUTTON) == LOW) break;
+    delay(20);
+    capture();
+  }
+  vram_fill(x,y,x+10*FONTPIXEL,y+FONTPIXEL,0);
+  disp_update();
+  while(1){
+    if (digitalRead(GPIO_BUTTON) == HIGH) break;
     delay(20);
   }
-  vram_fill(x,y,x+9*24,y+24,0);
-  disp_update();
+}
+
+//----画面表示テスト
+void disp_test(void)
+{
+  unsigned char c;
+  print_text(0,0,(unsigned char *)"DISP TEST");
+  button_wait();
+  c = 32;
+  vram_locate(0,1*FONTPIXEL);
+  while(1){
+    vram_putch(c);
+    disp_update();
+    c++;
+    if(c > 127)c=32;
+  }
 }
 
 //----AD初期化
 void adc_init(void)
 {
   pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, HIGH);
+  digitalWrite(LED_BUILTIN, HIGH);  // chip led
   delay(50);
   digitalWrite(LED_BUILTIN, LOW);
   analogReadResolution(12); // 0～4095
 }
 
-//---- バッテリチェック
-void bat_check(void) {
+//----単発のバッテリチェック
+void bat_check(void)
+{
   int adcount;
   int vsys;
   int vbat;
-  int x,y;
+  unsigned char strvsys[]="VSYS:0.00V";
+  unsigned char strvbat[]="VBAT:0.00V";
 
   adcount = analogRead(GPIO_VSYS);
   vsys = (int)((long)adcount * 3300 / 4095);
@@ -962,25 +979,32 @@ void bat_check(void) {
   vbat = (int)((long)adcount * 3300 / 4095);
   vbat *= 2;  // 分圧しているぶん2倍
 
-  x=0;
-  y=0;
-  vram_fill(x,y,x+24*10,y+24*2,color16bit(0,0,0));
-  vram_locate(x,y);
-  vram_putstr((unsigned char *)"VSYS:");
-  vram_putvolt(vsys);
-  vram_putstr((unsigned char *)"VBAT:");
-  vram_putvolt(vbat);
-  disp_update();
+  str_volt((unsigned char*)strvsys+5,vsys);
+  str_volt((unsigned char*)strvbat+5,vbat);
+
+  print_text(0,1*FONTPIXEL,strvsys);
+  print_text(0,2*FONTPIXEL,strvbat);
 
   if(vbat < 1800){
-    print_text(0,2*24,(unsigned char *)"UNDER 1.8V");
+    print_text(0,4*FONTPIXEL,(unsigned char *)"UNDER 1.8V");
     sound_play((char *)notes2);
     button_wait();    
   }
   if(vbat > 5500){
-    print_text(0,2*24,(unsigned char *)"OVER 5.5V");
+    print_text(0,4*FONTPIXEL,(unsigned char *)"OVER 5.5V");
     sound_play((char *)notes2);
     button_wait();    
+  }
+}
+
+//----連続的なバッテリチェック
+void bat_test(void)
+{
+  print_text(0,0,(unsigned char *)"BATTERY");
+  button_wait();
+  while(1){
+    bat_check();
+    delay(2000);
   }
 }
 
@@ -990,20 +1014,18 @@ void sound_init(void)
   pinMode(GPIO_SOUND, OUTPUT);
 }
 
-//----
+//----サウンド終了
 void sound_end(void)
 {
   digitalWrite(GPIO_SOUND, LOW); // PWM停止
   pinMode(GPIO_SOUND, INPUT);
 }
 
-//----
+//----サウンド再生
 void sound_play(char *p_note)
 {
   char note;
-
   sound_init();
-
   while(1){
     note = *p_note++;
     if (note == 99)break;
@@ -1017,8 +1039,19 @@ void sound_play(char *p_note)
   sound_end();
 }
 
+//----サウンドテスト
+void sound_test(void)
+{
+  print_text(0,0,(unsigned char *)"SOUND TEST");
+  while(1){
+    button_wait();
+    sound_play((char *)notes1);
+  }
+}
+
 //----NeoPixel初期化
-void neopixel_init() {
+void neopixel_init(void)
+{
   pixels.begin(); // INITIALIZE NeoPixel strip object
   pixels.clear(); // Set all pixel colors to 'off'
   delay(1);
@@ -1032,8 +1065,25 @@ void neopixel_set(unsigned char r,unsigned char g,unsigned char b)
   pixels.show();   // 
 }
 
+//----NeoPixelのテスト
+void neopixel_test(void)
+{
+  print_text(0,0,(unsigned char *)"NEOPIXEL");
+  button_wait();
+  while(1){
+    neopixel_set(255,0,0);  // R
+    delay(2000);
+    neopixel_set(0,255,0);  // G
+    delay(2000);
+    neopixel_set(0,0,255);  // B
+    delay(2000);
+    neopixel_set(0,0,0 );  // OFF
+    delay(2000);
+  }
+}
+
 //----モータ初期化
-void motor_init()
+void motor_init(void)
 {
   pinMode(GPIO_MOTOR1A, OUTPUT);
   pinMode(GPIO_MOTOR1B, OUTPUT);
@@ -1048,7 +1098,7 @@ void motor_init()
   analogWrite(GPIO_MOTOR2B, 0); // デューティ比 0%
 }
 
-//----
+//----モータ終了
 void motor_end(void)
 {
   digitalWrite(GPIO_MOTOR1A, LOW); // PWM停止
@@ -1095,68 +1145,72 @@ void motor_pair(int left_power,int right_power)
   motor_control(2,left_power);
 }
 
-//----
-void  motor_test1()
+//----モータ単体のテスト
+void  motor_test1(void)
 {
   int mot_num;
-  int mot_pow=40;
-
-  button_wait();
-  motor_init();
-
-  for(mot_num=1; mot_num<3; mot_num++){
-    print_text(0,3*24,(unsigned char *)"FOW_");
-    motor_control(mot_num,mot_pow);
-    delay(2000);
-    print_text(0,3*24,(unsigned char *)"STOP");
-    motor_control(mot_num,0);
-    delay(1000);
-    print_text(0,3*24,(unsigned char *)"BACK");
-    motor_control(mot_num,-mot_pow);
-    delay(2000);
-    print_text(0,3*24,(unsigned char *)"STOP");
-    motor_control(mot_num,0);
-    delay(1000);
-  }
-
-  motor_end();
-}
-//----
-void motor_test()
-{ 
-  int mot_pow=40;
+  int mot_pow=50;
 
   while(1){
     motor_init();
-    print_text(0,4*24,(unsigned char *)"MOTOR TEST");
+    print_text(0,0,(unsigned char *)"MOTOR TEST");
+    button_wait();
+    bat_check();
+    for(mot_num=1; mot_num<2; mot_num++){
+      print_text(0,3*FONTPIXEL,(unsigned char *)"FOW_");
+      motor_control(mot_num,mot_pow);
+      delay(2000);
+      print_text(0,3*FONTPIXEL,(unsigned char *)"STOP");
+      motor_control(mot_num,0);
+      delay(1000);
+      print_text(0,3*FONTPIXEL,(unsigned char *)"BACK");
+      motor_control(mot_num,-mot_pow);
+      delay(2000);
+      print_text(0,3*FONTPIXEL,(unsigned char *)"STOP");
+      motor_control(mot_num,0);
+      delay(1000);
+    }
+    motor_end();
+    sound_play((char *)notes1);
+  }
+}
+
+//----ロボットの移動テスト
+void motor_test(void)
+{ 
+  int mot_pow=50;
+
+  while(1){
+    motor_init();
+    print_text(0,0,(unsigned char *)"MOTOR TEST");
     button_wait();
     bat_check();
 
-    print_text(0,5*24,(unsigned char *)"FOW_");
+    print_text(0,5*FONTPIXEL,(unsigned char *)"FOW_");
     motor_pair(mot_pow,mot_pow);
     delay(2000);
-    print_text(0,5*24,(unsigned char *)"STOP");
+    print_text(0,5*FONTPIXEL,(unsigned char *)"STOP");
     motor_pair(0,0);
     delay(1000);
 
-    print_text(0,5*24,(unsigned char *)"BACK");
+    print_text(0,5*FONTPIXEL,(unsigned char *)"BACK");
     motor_pair(-mot_pow,-mot_pow);
     delay(2000);
-    print_text(0,5*24,(unsigned char *)"STOP");
+    print_text(0,5*FONTPIXEL,(unsigned char *)"STOP");
     motor_pair(0,0);
     delay(1000);
 
-    print_text(0,5*24,(unsigned char *)"TURN");
+    print_text(0,5*FONTPIXEL,(unsigned char *)"TURN");
     motor_pair(mot_pow,-mot_pow);
     delay(2000);
-    print_text(0,5*24,(unsigned char *)"STOP");
+    print_text(0,5*FONTPIXEL,(unsigned char *)"STOP");
     motor_pair(0,0);
     delay(1000);
 
-    print_text(0,5*24,(unsigned char *)"TURN");
+    print_text(0,5*FONTPIXEL,(unsigned char *)"TURN");
     motor_pair(-mot_pow,mot_pow);
     delay(2000);
-    print_text(0,5*24,(unsigned char *)"STOP");
+    print_text(0,5*FONTPIXEL,(unsigned char *)"STOP");
     motor_pair(0,0);
     delay(1000);
     motor_end();
@@ -1165,35 +1219,33 @@ void motor_test()
 }
 
 //----LINE TRACE ROBOT
-void linetrace()
+void linetrace(void)
 {
 #define THRESHOLD 0xA0
     int cnt;
-    int mot_pow;
-
-    mot_pow = 40;
+    int mot_pow = 50;
     motor_init();
     print_text(0,0,(unsigned char *)"LINE TRACE");
     button_wait();
     bat_check();
-    neopixel_set(99,99,99);
+    neopixel_set(99,99,99); // カラーLEDを白色に点灯
 
     while(1){
-        cnt = adc0_get();
+        cnt = adc0_get(); // 反射光センサーを検出
         if( cnt < THRESHOLD){
-            motor_pair(mot_pow,0);
+            motor_pair(mot_pow,0);  // 右折
         }else{
-            motor_pair(0,mot_pow);
+            motor_pair(0,mot_pow);  // 左折
         }
         delay(10);
     }
 }
 
-//----センサー
-int adc0_get()
+//----センサー測定
+int adc0_get(void)
 {
 #define LOOPMAX  5   // 測定回数
-#define DEVIDE  50   // 
+#define DEVIDE  50   // 割り算の定数
 
     int total;
     int i;
@@ -1209,8 +1261,8 @@ int adc0_get()
     return(total);
 }
 
-//----反射光センサー
-void ref_test()
+//----反射光センサーのテスト
+void ref_test(void)
 {
   int cnt;
   int x,y;
@@ -1221,8 +1273,8 @@ void ref_test()
   {
     cnt = adc0_get();
     x=0;
-    y=24*2;
-    vram_fill(x,y,x+2*24,y+24,color16bit(0,0,0));
+    y=FONTPIXEL*2;
+    vram_fill(x,y,x+2*FONTPIXEL,y+FONTPIXEL,color16bit(0,0,0));
     vram_locate(x,y);
     vram_puthex((unsigned char)cnt);
     disp_update();
@@ -1230,8 +1282,8 @@ void ref_test()
   }
 }
 
-//----カラーセンサー
-void color_test()
+//----カラーセンサーのテスト
+void color_test(void)
 {
   int x,y;
   int red,green,blue;
@@ -1251,59 +1303,65 @@ void color_test()
 
     neopixel_set(0,0,0);  // OFF
 
+    vram_fill(0,1*FONTPIXEL,8*FONTPIXEL,2*FONTPIXEL,color16bit(red,green,blue));
     x=0;
-    y=1*24;
-    vram_fill(x,y,x+8*24,y+4*24,color16bit(red,green,blue));
-    vram_locate(x+0   ,y+24*3);
+    y=2*FONTPIXEL;
+    vram_fill(x,y,x+8*FONTPIXEL,y+FONTPIXEL,0);
+    vram_locate(x+0          ,y);
     vram_puthex((unsigned char)red);
-    vram_locate(x+24*3,y+24*3);
+    vram_locate(x+FONTPIXEL*3,y);
     vram_puthex((unsigned char)green);
-    vram_locate(x+24*6,y+24*3);
+    vram_locate(x+FONTPIXEL*6,y);
     vram_puthex((unsigned char)blue);
 
     red_only   = red - ((green + blue)/2);
     green_only = green - ((blue + red)/2);
     blue_only  = blue - ((green + red)/2);
     x=0;
-    y=8*24;
+    y=6*FONTPIXEL;
     if(red_only > 0x20){
-      vram_fill(0*24,7*24,8*24,8*24,color16bit(255,0,0));
+      vram_fill(0,5*FONTPIXEL,8*FONTPIXEL,6*FONTPIXEL,color16bit(255,0,0));
       print_text(x,y,(unsigned char *)"RED__");
       sound_play((char *)note_do);
     }else if (green_only > 0x20){
-      vram_fill(0*24,7*24,8*24,8*24,color16bit(0,255,0));
+      vram_fill(0,5*FONTPIXEL,8*FONTPIXEL,6*FONTPIXEL,color16bit(0,255,0));
       print_text(x,y,(unsigned char *)"GREEN");
       sound_play((char *)note_fa);
     }else if (blue_only > 0x20){
-      vram_fill(0*24,7*24,8*24,8*24,color16bit(0,0,255));
+      vram_fill(0,5*FONTPIXEL,8*FONTPIXEL,6*FONTPIXEL,color16bit(0,0,255));
       print_text(x,y,(unsigned char *)"BLUE_");
       sound_play((char *)note_si);
     }else{
-      vram_fill(0*24,7*24,8*24,8*24,color16bit(0,0,0));
+      vram_fill(0,5*FONTPIXEL,8*FONTPIXEL,6*FONTPIXEL,color16bit(0,0,0));
       print_text(x,y,(unsigned char *)"_____");
     }
+    capture();
   }
 }
 
 //----
 void setup(void)
 {
-//  Serial.begin(115200);
-//  while(!Serial);
+  Serial.begin(115200);
+  adc_init();
   button_init();
   sdcard_init();
-  adc_init();
   disp_init();
   neopixel_init();
-  vram_textzoom(FONTSIZE);
+  Serial.write("start\n");
 }
 
 //----
 void loop()
 {
-//  ref_test();   // 反射光センサー
-//  color_test(); // カラーセンサー
-//  linetrace();  // ライントレース
-  motor_test(); // モーターテスト
-//  sdcard_test();  // SDカード読み書き
+//  disp_test();   // 画面表示テスト
+//  bat_test();    // 連続的なバッテリチェック
+//  ref_test();    // 反射光センサーのテスト
+//  color_test();  // カラーセンサーのテスト
+//  sound_test();  // サウンドテスト
+//  neopixel_test();  // NeoPixelのテスト
+//  motor_test1();  // モータ単体のテスト
+  motor_test();  // 移動のテスト
+//  sdcard_test(); // SDカード読み書きテスト
+//  linetrace();   // ライントレース
 }
